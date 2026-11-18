@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -45,6 +46,9 @@ class _TerminalScreenState extends State<TerminalScreen> {
   var _endedNotified = false;
   String? _lastSizeSent;
   var _showJump = false;
+  var _chatMode = true;
+  final List<({String role, String text})> _chat = [];
+  final _assistantBuffer = StringBuffer();
   final _speech = SpeechToText();
   var _listening = false;
   final _tts = FlutterTts();
@@ -178,6 +182,19 @@ class _TerminalScreenState extends State<TerminalScreen> {
       }
     });
     _scheduleIdleSend();
+    if (additions.isNotEmpty) {
+      final text = additions.toString();
+      if (_assistantBuffer.isEmpty && _chat.isNotEmpty && _chat.last.role == 'assistant') {
+        // append to existing assistant bubble
+      }
+      if (_chat.isEmpty || _chat.last.role != 'assistant' || _assistantBuffer.isEmpty) {
+        _chat.add((role: 'assistant', text: text));
+      } else {
+        final last = _chat.removeLast();
+        _chat.add((role: 'assistant', text: last.text + text));
+      }
+      _assistantBuffer.write(text);
+    }
     if (_readAloud && additions.isNotEmpty) {
       unawaited(_tts.speak(additions.toString().trim().substring(0, 
           additions.toString().trim().length.clamp(0, 320))));
@@ -285,6 +302,53 @@ class _TerminalScreenState extends State<TerminalScreen> {
       kept.add(line);
     }
     return kept.join('\n');
+  }
+
+  List<String> _slashSuggestions() {
+    final commands = switch (widget.initial.provider) {
+      AgentProvider.claude => const [
+        '/help', '/clear', '/compact', '/config', '/cost', '/doctor',
+        '/init', '/login', '/logout', '/mcp', '/memory', '/model',
+        '/permissions', '/review', '/status', '/vim',
+      ],
+      AgentProvider.opencode => const [
+        '/help', '/new', '/sessions', '/models', '/connect', '/exit',
+      ],
+      AgentProvider.codex => const [
+        '/model', '/approvals', '/status', '/diff', '/mention', '/help',
+      ],
+      AgentProvider.gemini => const [
+        '/help', '/tools', '/stats', '/memory', '/chat',
+      ],
+    };
+    final query = _input.text.trim().toLowerCase();
+    if (query == '/') return commands;
+    return commands
+        .where((cmd) => cmd.toLowerCase().startsWith(query))
+        .toList();
+  }
+
+  Future<void> _attachFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    if (file.bytes == null) return;
+    final safeName = file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final path = '/tmp/agentlink-attachments/$safeName';
+    try {
+      await widget.controller.fsWrite(path, file.bytes!);
+      final current = _input.text;
+      final updated = current.isEmpty ? '@$path ' : '$current @$path ';
+      setState(() => _input.text = updated);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not attach file: $error')),
+      );
+    }
   }
 
   void _jumpToBottom({bool animated = true}) {
@@ -549,6 +613,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
               onPressed: _attachDesktop,
               icon: const Icon(Icons.desktop_windows_outlined),
             ),
+          IconButton(
+            tooltip: _chatMode ? 'Terminal view' : 'Chat view',
+            onPressed: () => setState(() => _chatMode = !_chatMode),
+            icon: Icon(_chatMode ? Icons.terminal : Icons.chat_bubble_outline),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
@@ -620,55 +689,97 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 ),
               ),
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-                decoration: BoxDecoration(
-                  color: terminalBackground,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: theme.colorScheme.outlineVariant),
-                ),
-                child: Stack(
-                  children: [
-                    Scrollbar(
+              child: _chatMode
+                  ? ListView.builder(
                       controller: _scroll,
-                      interactive: true,
-                      thumbVisibility: true,
-                      thickness: 6,
-                      radius: const Radius.circular(3),
-                      child: SingleChildScrollView(
-                        controller: _scroll,
-                        padding: const EdgeInsets.all(12),
-                        child: SelectableText(
-                          _displayOutput().isEmpty
-                              ? (_running
-                                    ? 'Connecting to the session…'
-                                    : 'No output in the terminal buffer.')
-                              : _displayOutput(),
-                          style: TextStyle(
-                            color: terminalForeground,
-                            fontSize: 11.5,
-                            height: 1.35,
-                            fontFamily: 'monospace',
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                      itemCount: _chat.length,
+                      itemBuilder: (context, index) {
+                        final message = _chat[index];
+                        final isUser = message.role == 'user';
+                        return Align(
+                          alignment: isUser
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(10),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.82,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUser
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                                  : terminalBackground,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isUser
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                                    : theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: SelectableText(
+                              message.text,
+                              style: TextStyle(
+                                color: terminalForeground,
+                                fontSize: 12,
+                                height: 1.35,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
                           ),
-                        ),
+                        );
+                      },
+                    )
+                  : Container(
+                      margin: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                      decoration: BoxDecoration(
+                        color: terminalBackground,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: theme.colorScheme.outlineVariant),
+                      ),
+                      child: Stack(
+                        children: [
+                          Scrollbar(
+                            controller: _scroll,
+                            interactive: true,
+                            thumbVisibility: true,
+                            thickness: 6,
+                            radius: const Radius.circular(3),
+                            child: SingleChildScrollView(
+                              controller: _scroll,
+                              padding: const EdgeInsets.all(12),
+                              child: SelectableText(
+                                _displayOutput().isEmpty
+                                    ? (_running
+                                          ? 'Connecting to the session…'
+                                          : 'No output in the terminal buffer.')
+                                    : _displayOutput(),
+                                style: TextStyle(
+                                  color: terminalForeground,
+                                  fontSize: 11.5,
+                                  height: 1.35,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_showJump)
+                            Positioned(
+                              right: 12,
+                              bottom: 12,
+                              child: FloatingActionButton.small(
+                                heroTag: 'jump',
+                                onPressed: () {
+                                  setState(() => _stickToBottom = true);
+                                  _jumpToBottom();
+                                },
+                                child: const Icon(Icons.arrow_downward),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (_showJump)
-                      Positioned(
-                        right: 12,
-                        bottom: 12,
-                        child: FloatingActionButton.small(
-                          heroTag: 'jump',
-                          onPressed: () {
-                            setState(() => _stickToBottom = true);
-                            _jumpToBottom();
-                          },
-                          child: const Icon(Icons.arrow_downward),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
             ),
             _QuickKeys(
               enabled: _running,
@@ -774,6 +885,28 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   ],
                 ),
               ),
+            if (_chatMode && _input.text.startsWith('/'))
+              SizedBox(
+                height: 34,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  itemCount: _slashSuggestions().length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) {
+                    final cmd = _slashSuggestions()[index];
+                    return OutlinedButton(
+                      onPressed: () => setState(() => _input.text = '$cmd '),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 28),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      child: Text(cmd),
+                    );
+                  },
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
               child: Row(
@@ -819,6 +952,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Attach file/image',
+                    onPressed: _running ? _attachFile : null,
+                    icon: const Icon(Icons.attach_file, size: 20),
+                  ),
                   IconButton.filled(
                     tooltip: 'Send',
                     onPressed: _running ? _sendLine : null,

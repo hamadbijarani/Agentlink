@@ -686,6 +686,14 @@ final class BridgeApi {
     return FsEntry.fromJson(Map<String, dynamic>.from(json['entry'] as Map));
   }
 
+  Future<Map<String, dynamic>> fsWrite(String path, List<int> bytes) async {
+    return _request(
+      'POST',
+      '/v1/fs/write',
+      body: {'path': path, 'dataBase64': base64Encode(bytes)},
+    );
+  }
+
   Future<List<AgentSession>> history({int limit = 200}) async {
     final json = await _request(
       'GET',

@@ -174,6 +174,24 @@ final class BridgeRouter {
         'entry': entry.toJson(),
       });
     }
+    if (method == 'POST' && path == '/v1/fs/write') {
+      final pathValue = bodyString(body, 'path');
+      final base64 = bodyString(body, 'dataBase64');
+      if (base64.isEmpty) {
+        throw const ApiException(HttpStatus.badRequest, 'dataBase64 is required.');
+      }
+      List<int> bytes;
+      try {
+        bytes = base64Decode(base64);
+      } on FormatException {
+        throw const ApiException(HttpStatus.badRequest, 'Invalid base64 data.');
+      }
+      final entry = await files.write(path: pathValue, bytes: bytes);
+      return BridgeResponse(HttpStatus.created, {
+        'entry': entry.toJson(),
+        'path': pathValue,
+      });
+    }
 
     if (const {
       '/v1/sessions',

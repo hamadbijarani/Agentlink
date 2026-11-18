@@ -188,6 +188,39 @@ final class FileService {
     }
   }
 
+
+  Future<FsEntry> write({
+    required String path,
+    required List<int> bytes,
+    bool createParents = true,
+  }) async {
+    final clean = path.trim();
+    if (clean.isEmpty) {
+      throw const FsException('A file path is required.');
+    }
+    final file = File(_absolute(clean));
+    if (createParents) {
+      await file.parent.create(recursive: true);
+    }
+    try {
+      await file.writeAsBytes(bytes, flush: true);
+      final stat = await file.stat();
+      return FsEntry(
+        name: _basename(file.path),
+        path: file.path,
+        isDirectory: false,
+        isHidden: _basename(file.path).startsWith('.'),
+        size: stat.size,
+        modifiedAt: stat.modified,
+      );
+    } on FileSystemException catch (error) {
+      throw FsException(
+        'Could not write the file: ${error.osError?.message ?? error.message}',
+        status: 403,
+      );
+    }
+  }
+
   Directory _resolveDirectory(String path) {
     final clean = path.trim();
     if (clean.isEmpty) return Directory(home);

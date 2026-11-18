@@ -434,6 +434,11 @@ final class AppController extends ChangeNotifier {
 
   Future<FsEntry> fsMkdir(String path) async => _requireApi().fsMkdir(path);
 
+  Future<String> fsWrite(String path, List<int> bytes) async {
+    final json = await _requireApi().fsWrite(path, bytes);
+    return json['path']?.toString() ?? path;
+  }
+
   Future<SessionDetail> historyDetail(AgentSession session) async =>
       _requireApi().historyDetail(session);
 
