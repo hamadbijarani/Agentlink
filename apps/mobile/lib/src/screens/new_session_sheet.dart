@@ -324,6 +324,26 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    const _Label('PROVIDER SHORTCUTS'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final shortcut in _shortcutsFor(_provider))
+                          ActionChip(
+                            label: Text(shortcut.label),
+                            onPressed: () {
+                              final current = _extraArgsController.text.trim();
+                              final next = current.isEmpty
+                                  ? shortcut.args
+                                  : '$current ${shortcut.args}';
+                              setState(() => _extraArgsController.text = next);
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     _Options(
                       titleController: _titleController,
                       resumeController: _resumeController,
@@ -601,3 +621,34 @@ final class _Label extends StatelessWidget {
     ),
   );
 }
+
+final class _Shortcut {
+  const _Shortcut(this.label, this.args);
+
+  final String label;
+  final String args;
+}
+
+List<_Shortcut> _shortcutsFor(AgentProvider provider) => switch (provider) {
+  AgentProvider.claude => const [
+    _Shortcut('Continue latest', '--continue'),
+    _Shortcut('Bypass permissions', '--dangerously-skip-permissions'),
+    _Shortcut('Accept edits', '--permission-mode acceptEdits'),
+    _Shortcut('Plan mode', '--permission-mode plan'),
+    _Shortcut('Chrome', '--chrome'),
+    _Shortcut('Bare mode', '--bare'),
+  ],
+  AgentProvider.opencode => const [
+    _Shortcut('Continue latest', '--continue'),
+    _Shortcut('Auto approve', '--auto'),
+    _Shortcut('Standalone', '--standalone'),
+  ],
+  AgentProvider.codex => const [
+    _Shortcut('Full auto', '--full-auto'),
+    _Shortcut('OSS provider', '--oss'),
+    _Shortcut('Skip git check', '--skip-git-repo-check'),
+  ],
+  AgentProvider.gemini => const [
+    _Shortcut('Sandbox', '--sandbox'),
+  ],
+};
