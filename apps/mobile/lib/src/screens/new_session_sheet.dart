@@ -34,6 +34,7 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
   late final TextEditingController _resumeController;
   late bool _openOnDesktop;
   var _starting = false;
+  String _permissionMode = 'default';
   String? _error;
 
   @override
@@ -103,6 +104,20 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
     }
   }
 
+  List<String> _permissionArgs() {
+    if (_permissionMode == 'default') return const [];
+    if (_provider == AgentProvider.claude) {
+      return ['--permission-mode', _permissionMode];
+    }
+    if (_provider == AgentProvider.opencode && _permissionMode == 'auto') {
+      return ['--auto'];
+    }
+    if (_provider == AgentProvider.codex && _permissionMode == 'auto') {
+      return ['--full-auto'];
+    }
+    return const [];
+  }
+
   Future<void> _start() async {
     FocusScope.of(context).unfocus();
     final info = widget.controller.providerInfo(_provider);
@@ -125,6 +140,14 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
         prompt: _promptController.text.trim(),
         title: _titleController.text.trim(),
         resumeSessionId: _resumeController.text.trim(),
+        model: _modelController.text.trim(),
+        extraArgs: [
+          ..._permissionArgs(),
+          ..._extraArgsController.text
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((item) => item.isNotEmpty),
+        ],
         openOnDesktop: _openOnDesktop,
       );
       if (!mounted) return;
@@ -266,6 +289,30 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
                       decoration: const InputDecoration(
                         hintText: 'Provider default (e.g. sonnet, gpt-5)',
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _Label('PERMISSION MODE'),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      initialValue: _permissionMode,
+                      items: const [
+                        DropdownMenuItem(value: 'default', child: Text('Default')),
+                        DropdownMenuItem(
+                          value: 'acceptEdits',
+                          child: Text('Accept edits'),
+                        ),
+                        DropdownMenuItem(value: 'auto', child: Text('Auto-approve')),
+                        DropdownMenuItem(value: 'plan', child: Text('Plan only')),
+                        DropdownMenuItem(value: 'dontAsk', child: Text('Don\'t ask')),
+                        DropdownMenuItem(
+                          value: 'bypassPermissions',
+                          child: Text('Bypass permissions'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => _permissionMode = value);
+                      },
+                      decoration: const InputDecoration(isDense: true),
                     ),
                     const SizedBox(height: 12),
                     const _Label('EXTRA CLI ARGS · OPTIONAL'),

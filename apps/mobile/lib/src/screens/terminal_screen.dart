@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
@@ -41,6 +45,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
   var _endedNotified = false;
   String? _lastSizeSent;
   var _showJump = false;
+  final _speech = SpeechToText();
+  var _listening = false;
+  final _tts = FlutterTts();
+  var _readAloud = false;
+  var _promptNotified = false;
   final _queueController = TextEditingController();
   final List<String> _queue = [];
   var _autoSendQueue = true;
@@ -64,6 +73,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
     _exitCode = widget.initial.exitCode;
     _cursor = max(0, widget.initial.outputCursor - 14000);
     _scroll.addListener(_onScroll);
+    unawaited(_initVoice());
     unawaited(_pollLoop());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focus.requestFocus();
@@ -78,6 +88,8 @@ class _TerminalScreenState extends State<TerminalScreen> {
     _scroll.dispose();
     _input.dispose();
     _queueController.dispose();
+    _speech.stop();
+    _tts.stop();
     _focus.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -92,6 +104,16 @@ class _TerminalScreenState extends State<TerminalScreen> {
         _stickToBottom = stick;
         _showJump = !stick;
       });
+    }
+  }
+
+  Future<void> _initVoice() async {
+    try {
+      await _speech.initialize();
+      await _tts.setLanguage('en-US');
+      await _tts.setSpeechRate(0.45);
+    } on Object {
+      // Voice features are optional.
     }
   }
 
@@ -156,6 +178,30 @@ class _TerminalScreenState extends State<TerminalScreen> {
       }
     });
     _scheduleIdleSend();
+    if (_readAloud && additions.isNotEmpty) {
+      unawaited(_tts.speak(additions.toString().trim().substring(0, 
+          additions.toString().trim().length.clamp(0, 320))));
+    }
+    final suggestions = _suggestions();
+    if (suggestions.isNotEmpty && !_promptNotified) {
+      _promptNotified = true;
+      unawaited(notificationsPlugin.show(
+        _sessionId.hashCode,
+        'Agent needs input',
+        'Open AgentLink to answer the prompt.',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'agentlink_prompts',
+            'Agent prompts',
+            channelDescription: 'Prompts and permission requests from agents',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      ));
+    } else if (suggestions.isEmpty) {
+      _promptNotified = false;
+    }
     if (_stickToBottom) _jumpToBottom(animated: false);
     if (!_running && !_endedNotified) {
       _endedNotified = true;
@@ -270,6 +316,28 @@ class _TerminalScreenState extends State<TerminalScreen> {
       widget.controller
           .resizeSession(_sessionId, columns, rows)
           .catchError((Object _) {}),
+    );
+  }
+
+  Future<void> _toggleListening() async {
+    if (_listening) {
+      await _speech.stop();
+      if (mounted) setState(() => _listening = false);
+      return;
+    }
+    final available = await _speech.initialize();
+    if (!available || !mounted) return;
+    setState(() => _listening = true);
+    await _speech.listen(
+      onResult: (result) {
+        if (!mounted) return;
+        setState(() {
+          _input.text = result.recognizedWords;
+          _input.selection = TextSelection.collapsed(
+            offset: _input.text.length,
+          );
+        });
+      },
     );
   }
 
@@ -677,6 +745,12 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     onSelected: (value) =>
                         setState(() => _mainOutputOnly = value),
                   ),
+                  FilterChip(
+                    label: const Text('Read aloud'),
+                    selected: _readAloud,
+                    onSelected: (value) =>
+                        setState(() => _readAloud = value),
+                  ),
                 ],
               ),
             ),
@@ -719,13 +793,26 @@ class _TerminalScreenState extends State<TerminalScreen> {
                             : 'Session ended',
                         isDense: true,
                         suffixIcon: _running
-                            ? IconButton(
-                                tooltip: 'Enter',
-                                onPressed: _sendLine,
-                                icon: const Icon(
-                                  Icons.keyboard_return,
-                                  size: 20,
-                                ),
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Voice input',
+                                    onPressed: _running ? _toggleListening : null,
+                                    icon: Icon(
+                                      _listening ? Icons.mic : Icons.mic_none,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Enter',
+                                    onPressed: _sendLine,
+                                    icon: const Icon(
+                                      Icons.keyboard_return,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
                               )
                             : null,
                       ),
