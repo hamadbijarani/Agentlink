@@ -461,7 +461,12 @@ List<SessionAdapter> defaultSessionAdapters() {
     ),
     FileSessionAdapter(
       provider: AgentProvider.gemini,
-      roots: [dir('$geminiHome/tmp')],
+      roots: [
+        dir('$geminiHome/tmp'),
+        dir('$geminiHome/sessions'),
+        dir('$geminiHome/chats'),
+        dir('$geminiHome/history'),
+      ],
     ),
   ];
 }

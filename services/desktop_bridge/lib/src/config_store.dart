@@ -56,6 +56,8 @@ final class BridgeConfig {
     required this.relaySecret,
     required this.httpHost,
     required this.httpPort,
+    this.httpsCert = '',
+    this.httpsKey = '',
     required this.openDesktopByDefault,
     required this.localAttachToken,
     required this.device,
@@ -71,6 +73,8 @@ final class BridgeConfig {
   final String relaySecret;
   final String httpHost;
   final int httpPort;
+  final String httpsCert;
+  final String httpsKey;
   final bool openDesktopByDefault;
   final String localAttachToken;
   final DeviceRecord? device;
@@ -79,6 +83,7 @@ final class BridgeConfig {
 
   bool get isPaired => device != null;
   bool get relayEnabled => relayUrl.isNotEmpty;
+  bool get tlsEnabled => httpsCert.isNotEmpty && httpsKey.isNotEmpty;
   bool get canPair => !isPaired && pairingSecret != null;
 
   BridgeConfig copyWith({
@@ -88,6 +93,8 @@ final class BridgeConfig {
     String? relaySecret,
     String? httpHost,
     int? httpPort,
+    String? httpsCert,
+    String? httpsKey,
     bool? openDesktopByDefault,
     String? localAttachToken,
     Object? device = _unset,
@@ -102,6 +109,8 @@ final class BridgeConfig {
     relaySecret: relaySecret ?? this.relaySecret,
     httpHost: httpHost ?? this.httpHost,
     httpPort: httpPort ?? this.httpPort,
+    httpsCert: httpsCert ?? this.httpsCert,
+    httpsKey: httpsKey ?? this.httpsKey,
     openDesktopByDefault:
         openDesktopByDefault ?? this.openDesktopByDefault,
     localAttachToken: localAttachToken ?? this.localAttachToken,
@@ -127,6 +136,8 @@ final class BridgeConfig {
     'http': {
       'host': httpHost,
       'port': httpPort,
+      'tlsCert': httpsCert,
+      'tlsKey': httpsKey,
     },
     'desktop': {
       'openByDefault': openDesktopByDefault,
@@ -168,6 +179,8 @@ final class BridgeConfig {
       relaySecret: relay['secret']?.toString() ?? '',
       httpHost: http['host']?.toString() ?? '0.0.0.0',
       httpPort: (http['port'] as num?)?.toInt() ?? 7331,
+      httpsCert: http['tlsCert']?.toString() ?? '',
+      httpsKey: http['tlsKey']?.toString() ?? '',
       openDesktopByDefault: desktop['openByDefault'] as bool? ?? true,
       localAttachToken: json['localAttachToken']?.toString() ?? '',
       device: device,
@@ -299,6 +312,8 @@ final class ConfigStore {
     String? relayToken,
     String? httpHost,
     int? httpPort,
+    String? httpsCert,
+    String? httpsKey,
     bool? openDesktopByDefault,
     bool clearRelay = false,
   }) async {
@@ -323,6 +338,12 @@ final class ConfigStore {
   bool verifyPairingSecret(String secret) {
     final expected = current.pairingSecret;
     if (expected == null || expected.isEmpty || current.isPaired) return false;
+    final created = DateTime.tryParse(current.pairingCreatedAt ?? '');
+    if (created != null &&
+        DateTime.now().toUtc().difference(created.toUtc()) >
+            const Duration(minutes: 10)) {
+      return false;
+    }
     return constantTimeEquals(expected, secret);
   }
 

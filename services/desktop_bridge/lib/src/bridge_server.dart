@@ -47,7 +47,19 @@ final class AgentLinkBridge {
       final config = configStore.current;
       final bindHost = host ?? _parseHost(config.httpHost);
       final bindPort = port ?? config.httpPort;
-      _server = await HttpServer.bind(bindHost, bindPort, shared: false);
+      if (config.tlsEnabled) {
+        final context = SecurityContext()
+          ..useCertificateChain(config.httpsCert)
+          ..usePrivateKey(config.httpsKey);
+        _server = await HttpServer.bindSecure(
+          bindHost,
+          bindPort,
+          context,
+          shared: false,
+        );
+      } else {
+        _server = await HttpServer.bind(bindHost, bindPort, shared: false);
+      }
       launcher.setPort(_server!.port);
       _server!.listen(_handle, onError: _logError);
       _log('HTTP listening on ${bindHost.address}:${_server!.port}');

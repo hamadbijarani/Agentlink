@@ -5,6 +5,7 @@ import '../models.dart';
 import '../util/format.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/provider_badge.dart';
+import 'terminal_screen.dart';
 
 final class LiveSessionsScreen extends StatelessWidget {
   const LiveSessionsScreen({
@@ -154,6 +155,28 @@ final class _SessionCard extends StatelessWidget {
     }
   }
 
+  Future<void> _restart(BuildContext context) async {
+    try {
+      final restarted = await controller.restartLiveSession(session);
+      if (!context.mounted) return;
+      controller.selectThemeProvider(restarted.provider);
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => TerminalScreen(
+            controller: controller,
+            initial: restarted,
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
   Future<void> _stop(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -218,6 +241,8 @@ final class _SessionCard extends StatelessWidget {
                           _attach(context);
                         case 'rename':
                           _rename(context);
+                        case 'restart':
+                          _restart(context);
                         case 'stop':
                           _stop(context);
                       }
@@ -247,6 +272,15 @@ final class _SessionCard extends StatelessWidget {
                           child: ListTile(
                             leading: Icon(Icons.stop_circle_outlined),
                             title: Text('Close session'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      if (!session.isActive)
+                        const PopupMenuItem(
+                          value: 'restart',
+                          child: ListTile(
+                            leading: Icon(Icons.restart_alt),
+                            title: Text('Restart'),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),

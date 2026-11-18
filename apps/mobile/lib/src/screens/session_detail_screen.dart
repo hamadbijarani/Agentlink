@@ -26,6 +26,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     widget.session,
   );
 
+  Future<void> _restart() async {
+    try {
+      final result = await widget.controller.restartHistorySession(
+        widget.session,
+      );
+      if (!mounted) return;
+      widget.controller.selectThemeProvider(result.provider);
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => TerminalScreen(
+            controller: widget.controller,
+            initial: result,
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
   Future<void> _resume() async {
     final result = await showModalBottomSheet<LiveSession>(
       context: context,
@@ -174,15 +197,24 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 SafeArea(
                   top: false,
                   minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _resume,
-                      icon: const Icon(Icons.play_arrow),
-                      label: Text(
-                        'Resume ${widget.session.provider.label} in this folder',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _restart,
+                          icon: const Icon(Icons.restart_alt),
+                          label: const Text('Restart'),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _resume,
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Resume'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],

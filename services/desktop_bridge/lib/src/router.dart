@@ -39,8 +39,23 @@ final class BridgeRouter {
   final FileService files;
   final List<SessionAdapter> adapters;
   final RelayStatus Function()? relayStatus;
+  final Map<String, List<DateTime>> _rateLimits = {};
 
   Future<BridgeResponse> handle(BridgeRequest request) async {
+    final key = request.remoteAddress?.trim().isNotEmpty == true
+        ? request.remoteAddress!.trim()
+        : 'local';
+    final now = DateTime.now();
+    final bucket = _rateLimits.putIfAbsent(key, () => <DateTime>[]);
+    bucket.removeWhere(
+      (time) => now.difference(time) > const Duration(minutes: 1),
+    );
+    if (bucket.length >= 240) {
+      return BridgeResponse(HttpStatus.tooManyRequests, {
+        'error': 'Too many requests. Slow down and try again.',
+      });
+    }
+    bucket.add(now);
     try {
       return await _route(request);
     } on ApiException catch (error) {
@@ -259,18 +274,19 @@ final class BridgeRouter {
     BridgeConfig config,
   ) async {
     final endpoints = <String>[];
+    final scheme = config.tlsEnabled ? 'https' : 'http';
     if (config.httpHost == '0.0.0.0' ||
         config.httpHost == '::' ||
         config.httpHost == '[::]') {
       for (final address in await discoverLanAddresses()) {
-        endpoints.add('http://$address:${config.httpPort}');
+        endpoints.add('$scheme://$address:${config.httpPort}');
       }
     } else if (config.httpHost != '127.0.0.1' &&
         config.httpHost != 'localhost') {
       final host = config.httpHost.contains(':')
           ? '[${config.httpHost}]'
           : config.httpHost;
-      endpoints.add('http://$host:${config.httpPort}');
+      endpoints.add('$scheme://$host:${config.httpPort}');
     }
     return {
       'id': config.bridgeId,

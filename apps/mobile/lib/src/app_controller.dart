@@ -362,6 +362,28 @@ final class AppController extends ChangeNotifier {
     );
   }
 
+  Future<LiveSession> restartLiveSession(LiveSession session) async {
+    return startSession(
+      provider: session.provider,
+      cwd: session.cwd,
+      prompt: session.initialPrompt ?? '',
+      title: session.title,
+      resumeSessionId: '',
+      openOnDesktop: session.openOnDesktop,
+    );
+  }
+
+  Future<LiveSession> restartHistorySession(AgentSession session) async {
+    return startSession(
+      provider: session.provider,
+      cwd: session.projectPath,
+      prompt: '',
+      title: session.title,
+      resumeSessionId: '',
+      openOnDesktop: info?.openDesktopByDefault ?? true,
+    );
+  }
+
   Future<void> renameSession(String id, String title) async {
     final api = _requireApi();
     final updated = await api.renameSession(id, title);

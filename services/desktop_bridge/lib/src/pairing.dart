@@ -67,14 +67,15 @@ PairingPayload buildPairingPayload(
   required int httpPort,
   List<String>? lanAddresses,
 }) {
+  final scheme = config.tlsEnabled ? 'https' : 'http';
   final endpoints = <String>[];
   if (httpHost == '0.0.0.0' || httpHost == '::' || httpHost == '[::]') {
     for (final address in lanAddresses ?? const <String>[]) {
-      endpoints.add('http://$address:$httpPort');
+      endpoints.add('$scheme://$address:$httpPort');
     }
   } else if (httpHost != '127.0.0.1' && httpHost != 'localhost') {
     final host = httpHost.contains(':') ? '[$httpHost]' : httpHost;
-    endpoints.add('http://$host:$httpPort');
+    endpoints.add('$scheme://$host:$httpPort');
   }
   return PairingPayload(
     bridgeId: config.bridgeId,

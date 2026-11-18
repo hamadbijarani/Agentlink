@@ -66,6 +66,12 @@ Future<void> _serve(List<String> arguments) async {
       httpPort: options.httpPort,
     );
   }
+  if (options.tlsCert != null || options.tlsKey != null) {
+    config = await store.configure(
+      httpsCert: options.tlsCert,
+      httpsKey: options.tlsKey,
+    );
+  }
   if (options.openDesktop != null) {
     config = await store.configure(
       openDesktopByDefault: options.openDesktop,
@@ -239,6 +245,8 @@ Future<void> _config(List<String> arguments) async {
   String? name;
   String? host;
   int? port;
+  String? tlsCert;
+  String? tlsKey;
   bool? openDesktop;
   var clearRelay = false;
   var showHelp = false;
@@ -264,6 +272,10 @@ Future<void> _config(List<String> arguments) async {
         host = value();
       case '--port':
         port = int.parse(value());
+      case '--tls-cert':
+        tlsCert = value();
+      case '--tls-key':
+        tlsKey = value();
       case '--open-desktop':
         openDesktop = true;
       case '--no-open-desktop':
@@ -292,6 +304,8 @@ Future<void> _config(List<String> arguments) async {
     clearRelay: clearRelay,
     httpHost: host,
     httpPort: port,
+    httpsCert: tlsCert,
+    httpsKey: tlsKey,
     openDesktopByDefault: openDesktop,
   );
   stdout.writeln('Configuration saved to ${store.file.path}.');
@@ -382,6 +396,8 @@ final class _ServeOptions {
     required this.name,
     required this.httpHost,
     required this.httpPort,
+    required this.tlsCert,
+    required this.tlsKey,
     required this.openDesktop,
     required this.noQr,
     required this.noHttp,
@@ -395,6 +411,8 @@ final class _ServeOptions {
   final String? name;
   final String? httpHost;
   final int? httpPort;
+  final String? tlsCert;
+  final String? tlsKey;
   final bool? openDesktop;
   final bool noQr;
   final bool noHttp;
@@ -408,6 +426,8 @@ final class _ServeOptions {
     String? name;
     String? httpHost;
     int? httpPort;
+    String? tlsCert;
+    String? tlsKey;
     bool? openDesktop;
     var noQr = false;
     var noHttp = false;
@@ -435,6 +455,10 @@ final class _ServeOptions {
           httpHost = value();
         case '--port':
           httpPort = int.parse(value());
+        case '--tls-cert':
+          tlsCert = value();
+        case '--tls-key':
+          tlsKey = value();
         case '--lan':
           httpHost = '0.0.0.0';
         case '--local':
@@ -473,6 +497,8 @@ final class _ServeOptions {
       name: name,
       httpHost: httpHost,
       httpPort: httpPort,
+      tlsCert: tlsCert,
+      tlsKey: tlsKey,
       openDesktop: openDesktop,
       noQr: noQr,
       noHttp: noHttp,
@@ -515,7 +541,11 @@ AgentLink bridge serve options
   --host <address>        HTTP bind address (default: 0.0.0.0)
   --lan                   Bind HTTP to 0.0.0.0 (LAN direct access)
   --local                 Bind HTTP to 127.0.0.1 only
-  --port <port>           HTTP port (default: 7331)
+  --port <port>           HTTP port
+  --tls-cert <path>       TLS certificate chain (PEM)
+  --tls-key <path>        TLS private key (PEM) (default: 7331)
+  --tls-cert <path>       TLS certificate chain (PEM) for direct HTTPS
+  --tls-key <path>        TLS private key (PEM) for direct HTTPS
   --no-http               Relay-only mode (disables desktop terminal windows)
   --name <name>           Friendly PC name shown in the app
   --no-desktop            Do not open a desktop terminal for new sessions
@@ -536,6 +566,8 @@ AgentLink bridge config options
   --name <name>           Friendly PC name
   --host <address>        HTTP bind address
   --port <port>           HTTP port
+  --tls-cert <path>       TLS certificate chain (PEM)
+  --tls-key <path>        TLS private key (PEM)
   --open-desktop          Open a desktop terminal for new sessions
   --no-open-desktop       Do not open desktop terminal windows
 ''';

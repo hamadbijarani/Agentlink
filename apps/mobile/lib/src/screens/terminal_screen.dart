@@ -275,6 +275,27 @@ class _TerminalScreenState extends State<TerminalScreen> {
     }
   }
 
+  Future<void> _restart() async {
+    try {
+      final restarted = await widget.controller.restartLiveSession(_session);
+      if (!mounted) return;
+      widget.controller.selectThemeProvider(restarted.provider);
+      Navigator.of(context).pushReplacement<void, void>(
+        MaterialPageRoute<void>(
+          builder: (_) => TerminalScreen(
+            controller: widget.controller,
+            initial: restarted,
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
   Future<void> _stop() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -545,7 +566,18 @@ class _TerminalScreenState extends State<TerminalScreen> {
             if (!_running)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Row(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _restart,
+                        icon: const Icon(Icons.restart_alt),
+                        label: const Text('Restart this session'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
@@ -561,6 +593,8 @@ class _TerminalScreenState extends State<TerminalScreen> {
                         color: theme.colorScheme.outline,
                       ),
                     ),
+                  ],
+                ),
                   ],
                 ),
               ),
