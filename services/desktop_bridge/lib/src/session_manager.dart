@@ -45,6 +45,8 @@ final class ManagedSession {
     required this.pty,
     this.initialPrompt,
     this.resumeSessionId,
+    this.model,
+    this.extraArgs = const [],
   });
 
   final String id;
@@ -498,15 +500,28 @@ AgentCommand commandFor({
 }
 
 final _ansiPattern = RegExp(
-  '[\u001B\u009B][[\\]()#;?]*'
-  '(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d/#&.:=?%@~_]+)*)?\u0007)|'
-  '(?:(?:\\d{1,4}(?:[;:]\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))',
+  '\u001B\\][^\u0007\u001B]*(?:\u0007|\u001B\\\\)|'
+  '\u001B[PX^_][^\u001B]*\u001B\\\\|'
+  '[\u001B\u009B][[\\]()#;?]*[\u0030-\u003F]*[\u0020-\u002F]*[\u0040-\u007E]',
 );
 
 String stripAnsi(String input) {
   var value = input.replaceAll(_ansiPattern, '');
   value = value.replaceAll('\r\n', '\n');
+  final lines = value.split('\n');
+  final resolved = <String>[];
+  for (final line in lines) {
+    if (line.contains('\r')) {
+      final parts = line.split('\r');
+      resolved.add(parts.isEmpty ? '' : parts.last);
+    } else {
+      resolved.add(line);
+    }
+  }
+  value = resolved.join('\n');
   value = value.replaceAll('\r', '\n');
   value = value.replaceAll('\u0000', '');
+  value = value.replaceAll(RegExp(r'\n{4,}'), '\n\n\n');
   return value;
 }
+

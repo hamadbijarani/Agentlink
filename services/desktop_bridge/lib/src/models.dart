@@ -238,7 +238,7 @@ final class LiveSession {
     if (endedAt != null) 'endedAt': endedAt!.toUtc().toIso8601String(),
     if (initialPrompt != null) 'initialPrompt': initialPrompt,
     if (resumeSessionId != null) 'resumeSessionId': resumeSessionId,
-    if (model != null && model.isNotEmpty) 'model': model,
+    if ((model ?? '').isNotEmpty) 'model': model,
     if (extraArgs.isNotEmpty) 'extraArgs': extraArgs,
     if (error != null) 'error': error,
     'active': isActive,
