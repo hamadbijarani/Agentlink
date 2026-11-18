@@ -22,6 +22,8 @@ final class AppController extends ChangeNotifier {
   List<ProviderInfo> providers = const [];
   List<LiveSession> liveSessions = const [];
   List<AgentSession> history = const [];
+  List<SessionTab> sessionTabs = const [];
+  int activeTabIndex = 0;
   bool providersLoading = false;
   bool liveLoading = false;
   bool historyLoading = false;
@@ -501,6 +503,42 @@ final class AppController extends ChangeNotifier {
       );
     }
     return api;
+  }
+
+  List<SessionTab> get tabs => sessionTabs;
+  
+  SessionTab? get activeTab => sessionTabs.isNotEmpty ? sessionTabs[activeTabIndex] : null;
+
+  void addTab(SessionTab tab) {
+    sessionTabs = [...sessionTabs, tab];
+    activeTabIndex = sessionTabs.length - 1;
+    _notify();
+  }
+
+  void removeTab(int index) {
+    if (sessionTabs.length <= 1) return;
+    sessionTabs = [
+      for (var i = 0; i < sessionTabs.length; i++)
+        if (i != index) sessionTabs[i],
+    ];
+    if (activeTabIndex >= sessionTabs.length) activeTabIndex = sessionTabs.length - 1;
+    _notify();
+  }
+
+  void setActiveTab(int index) {
+    if (index >= 0 && index < sessionTabs.length) {
+      activeTabIndex = index;
+      _notify();
+    }
+  }
+
+  Future<void> closeTabSession(int index) async {
+    if (index < 0 || index >= sessionTabs.length) return;
+    final tab = sessionTabs[index];
+    if (tab.liveSession != null && tab.liveSession!.isActive) {
+      await stopSession(tab.liveSession!.id);
+    }
+    removeTab(index);
   }
 
   String _deviceName() {

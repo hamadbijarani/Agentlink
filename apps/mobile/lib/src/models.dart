@@ -628,6 +628,47 @@ final class PairingResult {
   final List<ProviderInfo> providers;
 }
 
+// Session tab for multi-tab terminal
+enum SplitDirection { horizontal, vertical }
+
+final class SessionTab {
+  SessionTab({
+    required this.id,
+    this.liveSession,
+    this.title,
+    this.cwd,
+    this.createdAt,
+    this.splitDirection,
+    this.childTabs = const [],
+  });
+
+  final String id;
+  final LiveSession? liveSession;
+  final String? title;
+  final String? cwd;
+  final DateTime? createdAt;
+  final SplitDirection? splitDirection;
+  final List<SessionTab> childTabs;
+
+  SessionTab copyWith({
+    String? id,
+    LiveSession? liveSession,
+    String? title,
+    String? cwd,
+    DateTime? createdAt,
+    SplitDirection? splitDirection,
+    List<SessionTab>? childTabs,
+  }) => SessionTab(
+    id: id ?? this.id,
+    liveSession: liveSession ?? this.liveSession,
+    title: title ?? this.title,
+    cwd: cwd ?? this.cwd,
+    createdAt: createdAt ?? this.createdAt,
+    splitDirection: splitDirection ?? this.splitDirection,
+    childTabs: childTabs ?? this.childTabs,
+  );
+}
+
 int colorValue(String hex) {
   final clean = hex.replaceFirst('#', '').trim();
   final value = int.tryParse(clean, radix: 16) ?? 0xF5A742;

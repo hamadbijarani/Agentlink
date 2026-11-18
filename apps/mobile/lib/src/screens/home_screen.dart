@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onDismiss: controller.clearError,
                 onRetry: controller.retry,
               ),
+            _TabsBar(controller: controller),
             Expanded(child: pages[_index]),
           ],
         ),
@@ -172,6 +173,80 @@ final class _StatusDot extends StatelessWidget {
       color: connected ? const Color(0xFF4ADE80) : const Color(0xFFFACC15),
     ),
   );
+}
+
+final class _TabsBar extends StatelessWidget {
+  const _TabsBar({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = controller.tabs;
+    if (tabs.isEmpty) return const SizedBox.shrink();
+    return Container(
+      height: 40,
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        itemCount: tabs.length,
+        itemBuilder: (context, index) {
+          final tab = tabs[index];
+          final isActive = index == controller.activeTabIndex;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: InkWell(
+              onTap: () => controller.setActiveTab(index),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? Theme.of(context).colorScheme.primaryContainer
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tab.title ?? tab.liveSession?.title ?? 'Session',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: isActive
+                            ? Theme.of(context).colorScheme.onPrimaryContainer
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                    if (tabs.length > 1) ...[
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () => controller.removeTab(index),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Icon(
+                          Icons.close,
+                          size: 12,
+                          color: isActive
+                              ? Theme.of(context).colorScheme.onPrimaryContainer
+                              : Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 final class _ConnectionBanner extends StatelessWidget {
