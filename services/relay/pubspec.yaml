@@ -1,0 +1,14 @@
+name: agentlink_relay
+description: Self-hosted WebSocket relay for AgentLink.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  crypto: ^3.0.8
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
