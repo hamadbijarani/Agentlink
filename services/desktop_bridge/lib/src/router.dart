@@ -386,6 +386,11 @@ final class BridgeRouter {
     final prompt = bodyString(body, 'prompt').trim();
     final title = bodyString(body, 'title').trim();
     final resume = bodyString(body, 'resumeSessionId').trim();
+    final model = bodyString(body, 'model').trim();
+    final rawArgs = body is Map ? body['extraArgs'] : null;
+    final extraArgs = rawArgs is List
+        ? rawArgs.map((item) => item.toString()).toList()
+        : const <String>[];
     final openOnDesktop = bodyBool(
       body,
       'openOnDesktop',
@@ -397,6 +402,8 @@ final class BridgeRouter {
       prompt: prompt,
       title: title,
       resumeSessionId: resume,
+      model: model.isEmpty ? null : model,
+      extraArgs: extraArgs,
       openOnDesktop: openOnDesktop,
     );
     return BridgeResponse(HttpStatus.created, {

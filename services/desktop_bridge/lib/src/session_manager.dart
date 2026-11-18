@@ -55,6 +55,8 @@ final class ManagedSession {
   final NativePty pty;
   final String? initialPrompt;
   final String? resumeSessionId;
+  final String? model;
+  final List<String> extraArgs;
   String title;
   String status = 'starting';
   int? exitCode;
@@ -88,6 +90,8 @@ final class ManagedSession {
     endedAt: endedAt,
     initialPrompt: initialPrompt,
     resumeSessionId: resumeSessionId,
+    model: model,
+    extraArgs: extraArgs,
     desktopAttached: desktopAttached,
     desktopTerminal: desktopTerminal,
     error: error,
@@ -187,6 +191,8 @@ final class SessionManager {
     String? prompt,
     String? title,
     String? resumeSessionId,
+    String? model,
+    List<String>? extraArgs,
     bool? openOnDesktop,
   }) async {
     final directory = Directory(cwd);
@@ -219,6 +225,8 @@ final class SessionManager {
       provider: provider,
       prompt: cleanPrompt,
       resumeSessionId: cleanResume,
+      model: model,
+      extraArgs: extraArgs,
     );
     final id = randomId(10);
     final columns = 100;
@@ -269,6 +277,8 @@ final class SessionManager {
       pty: pty,
       initialPrompt: cleanPrompt.isEmpty ? null : cleanPrompt,
       resumeSessionId: cleanResume.isEmpty ? null : cleanResume,
+      model: model,
+      extraArgs: extraArgs ?? const [],
     );
     _sessions[id] = session;
     session.status = 'running';
@@ -440,29 +450,48 @@ final class SessionException implements Exception {
   String toString() => message;
 }
 
+List<String> _modelArgs(AgentProvider provider, String model) => switch (provider) {
+  AgentProvider.claude => ['--model', model],
+  AgentProvider.opencode => ['--model', model],
+  AgentProvider.codex => ['--model', model],
+  AgentProvider.gemini => ['--model', model],
+};
+
 AgentCommand commandFor({
   required AgentProvider provider,
   String prompt = '',
   String resumeSessionId = '',
+  String? model,
+  List<String>? extraArgs,
 }) {
   final hasPrompt = prompt.trim().isNotEmpty;
   final cleanPrompt = prompt.trim();
   final resume = resumeSessionId.trim();
   final hasResume = resume.isNotEmpty;
+  final cleanModel = model?.trim() ?? '';
+  final hasModel = cleanModel.isNotEmpty;
+  final args = <String>[
+    if (hasModel) ..._modelArgs(provider, cleanModel),
+    ...?extraArgs,
+  ];
   return switch (provider) {
     AgentProvider.claude => AgentCommand('claude', [
       if (hasResume) ...['--resume', resume],
+      ...args,
       if (hasPrompt) cleanPrompt,
     ]),
     AgentProvider.opencode => AgentCommand('opencode', [
       if (hasResume) ...['--session', resume],
+      ...args,
       if (hasPrompt) ...['--prompt', cleanPrompt],
     ]),
     AgentProvider.codex => AgentCommand('codex', [
       if (hasResume) ...['resume', resume],
+      ...args,
       if (hasPrompt) cleanPrompt,
     ]),
     AgentProvider.gemini => AgentCommand('gemini', [
+      ...args,
       if (hasPrompt) ...['-i', cleanPrompt],
     ]),
   };

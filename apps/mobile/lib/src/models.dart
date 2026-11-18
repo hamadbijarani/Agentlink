@@ -321,6 +321,8 @@ final class LiveSession {
     this.endedAt,
     this.initialPrompt,
     this.resumeSessionId,
+    this.model,
+    this.extraArgs = const [],
     this.desktopAttached = false,
     this.desktopTerminal,
     this.error,
@@ -345,6 +347,10 @@ final class LiveSession {
     )?.toLocal(),
     initialPrompt: json['initialPrompt']?.toString(),
     resumeSessionId: json['resumeSessionId']?.toString(),
+    model: json['model']?.toString(),
+    extraArgs: (json['extraArgs'] as List? ?? const [])
+        .map((item) => item.toString())
+        .toList(),
     desktopAttached: json['desktopAttached'] == true,
     desktopTerminal: json['desktopTerminal']?.toString(),
     error: json['error']?.toString(),
@@ -364,6 +370,8 @@ final class LiveSession {
   final DateTime? endedAt;
   final String? initialPrompt;
   final String? resumeSessionId;
+  final String? model;
+  final List<String> extraArgs;
   final bool desktopAttached;
   final String? desktopTerminal;
   final String? error;

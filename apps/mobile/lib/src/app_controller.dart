@@ -309,6 +309,8 @@ final class AppController extends ChangeNotifier {
     String prompt = '',
     String title = '',
     String resumeSessionId = '',
+    String model = '',
+    List<String> extraArgs = const [],
     required bool openOnDesktop,
   }) async {
     final api = _requireApi();
@@ -318,6 +320,8 @@ final class AppController extends ChangeNotifier {
       prompt: prompt,
       title: title,
       resumeSessionId: resumeSessionId,
+      model: model,
+      extraArgs: extraArgs,
       openOnDesktop: openOnDesktop,
     );
     liveSessions = [
@@ -348,6 +352,8 @@ final class AppController extends ChangeNotifier {
                   outputCursor: session.outputCursor,
                   initialPrompt: session.initialPrompt,
                   resumeSessionId: session.resumeSessionId,
+                  model: session.model,
+                  extraArgs: session.extraArgs,
                   desktopAttached: session.desktopAttached,
                   desktopTerminal: session.desktopTerminal,
                 )
@@ -369,6 +375,8 @@ final class AppController extends ChangeNotifier {
       prompt: session.initialPrompt ?? '',
       title: session.title,
       resumeSessionId: '',
+      model: session.model ?? '',
+      extraArgs: session.extraArgs,
       openOnDesktop: session.openOnDesktop,
     );
   }

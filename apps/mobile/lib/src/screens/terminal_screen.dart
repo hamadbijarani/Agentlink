@@ -41,6 +41,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
   var _endedNotified = false;
   String? _lastSizeSent;
   var _showJump = false;
+  final _queueController = TextEditingController();
+  final List<String> _queue = [];
+  var _autoSendQueue = true;
+  var _mainOutputOnly = true;
+  Timer? _idleTimer;
 
   String get _sessionId => widget.initial.id;
 
@@ -72,6 +77,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _input.dispose();
+    _queueController.dispose();
     _focus.dispose();
     _inputFocus.dispose();
     super.dispose();
@@ -149,11 +155,90 @@ class _TerminalScreenState extends State<TerminalScreen> {
         }
       }
     });
+    _scheduleIdleSend();
     if (_stickToBottom) _jumpToBottom(animated: false);
     if (!_running && !_endedNotified) {
       _endedNotified = true;
       _focus.unfocus();
     }
+  }
+
+  void _scheduleIdleSend() {
+    _idleTimer?.cancel();
+    if (!_autoSendQueue || _queue.isEmpty || !_running) return;
+    _idleTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted || !_running || _queue.isEmpty || !_autoSendQueue) return;
+      unawaited(_sendNext());
+    });
+  }
+
+  Future<void> _sendNext() async {
+    if (_queue.isEmpty || !_running) return;
+    final text = _queue.removeAt(0);
+    await _send('$text\r');
+    if (mounted) setState(() {});
+  }
+
+  void _enqueue() {
+    final text = _queueController.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      _queue.add(text);
+      _queueController.clear();
+    });
+  }
+
+  List<String> _suggestions() {
+    final lines = _output.split('\n');
+    final tail = lines.length > 24 ? lines.sublist(lines.length - 24) : lines;
+    final result = <String>[];
+    final seen = <String>{};
+    for (final raw in tail) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      if (line.contains('[Y/n]') || line.contains('[y/N]')) {
+        for (final token in ['y', 'n', 'a']) {
+          if (seen.add(token)) result.add(token);
+        }
+      }
+      final optionMatch = RegExp(r'^\s*(\d+)[).]\s*(.+)$').firstMatch(line);
+      if (optionMatch != null) {
+        final token = optionMatch.group(1)!;
+        if (seen.add(token)) result.add(token);
+      }
+      final lower = line.toLowerCase();
+      if (lower.contains('allow') ||
+          lower.contains('approve') ||
+          lower.contains('proceed') ||
+          lower.contains('continue')) {
+        for (final token in ['y', 'yes', 'continue']) {
+          if (seen.add(token)) result.add(token);
+        }
+      }
+    }
+    return result.take(8).toList();
+  }
+
+  String _displayOutput() {
+    if (!_mainOutputOnly) return _output;
+    final lines = _output.split('\n');
+    final kept = <String>[];
+    var blankRun = 0;
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (RegExp(r'^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏\-|/\\. ]+$').hasMatch(trimmed) &&
+          trimmed.length < 12) {
+        continue;
+      }
+      if (trimmed.isEmpty) {
+        blankRun++;
+        if (blankRun > 2) continue;
+      } else {
+        blankRun = 0;
+      }
+      kept.add(line);
+    }
+    return kept.join('\n');
   }
 
   void _jumpToBottom({bool animated = true}) {
@@ -486,11 +571,11 @@ class _TerminalScreenState extends State<TerminalScreen> {
                         controller: _scroll,
                         padding: const EdgeInsets.all(12),
                         child: SelectableText(
-                          _output.isEmpty
+                          _displayOutput().isEmpty
                               ? (_running
                                     ? 'Connecting to the session…'
                                     : 'No output in the terminal buffer.')
-                              : _output,
+                              : _displayOutput(),
                           style: TextStyle(
                             color: terminalForeground,
                             fontSize: 11.5,
@@ -527,6 +612,94 @@ class _TerminalScreenState extends State<TerminalScreen> {
                     )
                   : _send(value),
             ),
+            if (_running && _suggestions().isNotEmpty)
+              SizedBox(
+                height: 34,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  itemCount: _suggestions().length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (context, index) {
+                    final token = _suggestions()[index];
+                    return OutlinedButton(
+                      onPressed: () => _send('$token\r'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 28),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      child: Text(token),
+                    );
+                  },
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _queueController,
+                      enabled: _running,
+                      minLines: 1,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        hintText: 'Queue a prompt…',
+                      ),
+                      onSubmitted: (_) => _enqueue(),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    tooltip: 'Queue prompt',
+                    onPressed: _running ? _enqueue : null,
+                    icon: const Icon(Icons.playlist_add, size: 20),
+                  ),
+                  IconButton(
+                    tooltip: 'Send next queued',
+                    onPressed: _running && _queue.isNotEmpty
+                        ? () => _sendNext()
+                        : null,
+                    icon: const Icon(Icons.skip_next, size: 20),
+                  ),
+                  FilterChip(
+                    label: const Text('Auto'),
+                    selected: _autoSendQueue,
+                    onSelected: (value) =>
+                        setState(() => _autoSendQueue = value),
+                  ),
+                  const SizedBox(width: 6),
+                  FilterChip(
+                    label: const Text('Main only'),
+                    selected: _mainOutputOnly,
+                    onSelected: (value) =>
+                        setState(() => _mainOutputOnly = value),
+                  ),
+                ],
+              ),
+            ),
+            if (_queue.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    for (var i = 0; i < _queue.length; i++)
+                      Chip(
+                        label: Text(
+                          _queue[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onDeleted: () =>
+                            setState(() => _queue.removeAt(i)),
+                      ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
               child: Row(

@@ -582,6 +582,8 @@ final class BridgeApi {
     String prompt = '',
     String title = '',
     String resumeSessionId = '',
+    String model = '',
+    List<String> extraArgs = const [],
     required bool openOnDesktop,
   }) async {
     final json = await _request(
@@ -593,6 +595,8 @@ final class BridgeApi {
         'prompt': prompt,
         'title': title,
         'resumeSessionId': resumeSessionId,
+        'model': model,
+        'extraArgs': extraArgs,
         'openOnDesktop': openOnDesktop,
       },
     );

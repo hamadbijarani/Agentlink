@@ -191,6 +191,8 @@ final class LiveSession {
     this.endedAt,
     this.initialPrompt,
     this.resumeSessionId,
+    this.model,
+    this.extraArgs = const [],
     this.desktopAttached = false,
     this.desktopTerminal,
     this.error,
@@ -210,6 +212,8 @@ final class LiveSession {
   final DateTime? endedAt;
   final String? initialPrompt;
   final String? resumeSessionId;
+  final String? model;
+  final List<String> extraArgs;
   final bool desktopAttached;
   final String? desktopTerminal;
   final String? error;
@@ -234,6 +238,8 @@ final class LiveSession {
     if (endedAt != null) 'endedAt': endedAt!.toUtc().toIso8601String(),
     if (initialPrompt != null) 'initialPrompt': initialPrompt,
     if (resumeSessionId != null) 'resumeSessionId': resumeSessionId,
+    if (model != null && model.isNotEmpty) 'model': model,
+    if (extraArgs.isNotEmpty) 'extraArgs': extraArgs,
     if (error != null) 'error': error,
     'active': isActive,
     'kind': 'live',

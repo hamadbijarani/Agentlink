@@ -28,6 +28,8 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
   late AgentProvider _provider;
   late final TextEditingController _cwdController;
   late final TextEditingController _promptController;
+  late final TextEditingController _modelController;
+  late final TextEditingController _extraArgsController;
   late final TextEditingController _titleController;
   late final TextEditingController _resumeController;
   late bool _openOnDesktop;
@@ -48,6 +50,8 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
     _promptController = TextEditingController(
       text: widget.initialPrompt ?? '',
     );
+    _modelController = TextEditingController();
+    _extraArgsController = TextEditingController();
     _titleController = TextEditingController();
     _resumeController = TextEditingController(
       text: widget.initialResumeId ?? '',
@@ -76,6 +80,8 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
   void dispose() {
     _cwdController.dispose();
     _promptController.dispose();
+    _modelController.dispose();
+    _extraArgsController.dispose();
     _titleController.dispose();
     _resumeController.dispose();
     super.dispose();
@@ -250,6 +256,24 @@ class _NewSessionSheetState extends State<NewSessionSheet> {
                         hintText:
                             'Leave empty to open the interactive CLI with no '
                             'prompt.',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _Label('MODEL · OPTIONAL'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _modelController,
+                      decoration: const InputDecoration(
+                        hintText: 'Provider default (e.g. sonnet, gpt-5)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _Label('EXTRA CLI ARGS · OPTIONAL'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _extraArgsController,
+                      decoration: const InputDecoration(
+                        hintText: '--allowedTools Bash Edit, --auto, etc.',
                       ),
                     ),
                     const SizedBox(height: 12),
