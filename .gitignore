@@ -18,3 +18,8 @@
 # Local backups
 Backup/
 backup/
+
+# Project planning docs (local only)
+research.md
+implementation_plan.md
+resources.md
