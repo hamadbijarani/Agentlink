@@ -35,7 +35,12 @@ final class LiveSessionsScreen extends StatelessWidget {
     }
     return RefreshIndicator(
       onRefresh: controller.refreshLive,
-      child: ListView(
+      child: Scrollbar(
+        interactive: true,
+        thumbVisibility: false,
+        thickness: 5,
+        radius: const Radius.circular(3),
+        child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
         children: [
@@ -67,6 +72,7 @@ final class LiveSessionsScreen extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

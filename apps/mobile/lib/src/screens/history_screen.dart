@@ -108,7 +108,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   )
                 : RefreshIndicator(
                     onRefresh: controller.refreshHistory,
-                    child: ListView.separated(
+                    child: Scrollbar(
+                      interactive: true,
+                      thumbVisibility: false,
+                      thickness: 5,
+                      radius: const Radius.circular(3),
+                      child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                       itemCount: sessions.length,
@@ -220,6 +225,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ),
                         );
                       },
+                    ),
                     ),
                   ),
           ),

@@ -185,13 +185,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               Expanded(
                 child: detail.messages.isEmpty
                     ? const Center(child: Text('No messages recorded.'))
-                    : ListView.separated(
+                    : Scrollbar(
+                    interactive: true,
+                    thumbVisibility: false,
+                    thickness: 5,
+                    radius: const Radius.circular(3),
+                    child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
                         itemCount: detail.messages.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 14),
                         itemBuilder: (context, index) =>
                             _MessageBubble(message: detail.messages[index]),
                       ),
+                    ),
               ),
               if (widget.session.projectPath.isNotEmpty)
                 SafeArea(

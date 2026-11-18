@@ -478,6 +478,10 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   children: [
                     Scrollbar(
                       controller: _scroll,
+                      interactive: true,
+                      thumbVisibility: true,
+                      thickness: 6,
+                      radius: const Radius.circular(3),
                       child: SingleChildScrollView(
                         controller: _scroll,
                         padding: const EdgeInsets.all(12),
