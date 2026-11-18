@@ -138,9 +138,6 @@ A release build of the Android app is produced with
 
 ## Documents
 
-- `research.md` — research and technology choices
-- `implementation_plan.md` — architecture and phased roadmap
-- `resources.md` — dependencies and references
 - `services/desktop_bridge/API.md` — HTTP API reference
 - `services/desktop_bridge/README.md` — bridge-specific notes
 - `services/relay/README.md` — relay-specific notes
