@@ -24,6 +24,10 @@ dart pub get
 # Same trusted LAN:
 dart run bin/agentlink_bridge.dart --host 0.0.0.0
 
+# Directly over the internet with TLS:
+dart run bin/agentlink_bridge.dart --host 0.0.0.0 \
+  --tls-cert /path/cert.pem --tls-key /path/key.pem
+
 # Over the internet via a relay:
 dart run bin/agentlink_bridge.dart --relay wss://relay.example.com:8787
 ```
@@ -60,3 +64,9 @@ Press `Ctrl+]` in that terminal to detach without stopping the agent.
 The bridge stores only the SHA-256 hash of the device token. A second pairing
 attempt returns `409 Conflict`. Run `agentlink-bridge reset` to unpair, then
 start the bridge again to show a new QR code.
+
+## Security
+
+- Direct mode requires HTTPS; use a real certificate or reverse proxy.
+- Pairing secrets expire after 10 minutes and requests are rate-limited per client.
+- The bridge accepts only one paired phone at a time.

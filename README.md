@@ -49,6 +49,7 @@ claude / opencode / codex / gemini
 - **Desktop visibility** is optional: the bridge opens a terminal emulator
   running `agentlink-bridge attach <sessionId>` against the local HTTP API.
   Closing that terminal detaches; it does not stop the agent.
+- **Restart** is supported for ended live sessions and historical sessions.
 - **Provider themes** are served by the bridge and applied dynamically in the app.
 
 ## Quick start
@@ -76,7 +77,20 @@ The first start prints a QR code (or a pairing link with `--no-qr`). Scan it
 with the Android app. The bridge remembers the pairing in
 `~/.agentlink/bridge.json`.
 
-### 3. Build and run the Android app
+### 3. Direct HTTPS mode (no relay)
+
+The bridge can be exposed directly to the internet with TLS:
+
+```bash
+agentlink-bridge serve --host 0.0.0.0 --port 7331 \
+  --tls-cert /path/cert.pem --tls-key /path/key.pem
+```
+
+Pairing QR endpoints and direct LAN endpoints then use `https://`. The device
+token, one-phone limit, and pairing secret still apply. Use a real certificate
+or a trusted reverse proxy in production.
+
+### 4. Build and run the Android app
 
 ```bash
 cd apps/mobile
@@ -111,7 +125,10 @@ Important options: `--relay`, `--relay-token`, `--no-relay`, `--host`,
 - Prompts are passed as direct process arguments, not through a shell.
 - Transcript refs are restricted to provider session roots, including resolved
   symbolic links.
-- Use `wss://` for the relay whenever it is reachable from the internet.
+- Pairing secrets expire after 10 minutes and the bridge rate-limits requests
+  per client address.
+- Use `wss://` for the relay or `https://` for direct mode whenever it is
+  reachable from the internet.
 
 ## Development
 
