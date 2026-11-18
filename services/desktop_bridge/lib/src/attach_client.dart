@@ -115,15 +115,18 @@ final class AttachClient {
             '\r\n\u001B[31m[AgentLink] Lost the bridge connection; retrying…\u001B[0m\r\n',
           );
         }
-        if (failures > 60) {
+        if (failures > 300) {
           _restoreAndExit(
             message:
-                '\r\n\u001B[31m[AgentLink] $error\u001B[0m\r\n',
+                '\r\n\u001B[31m[AgentLink] Connection lost for too long: $error\u001B[0m\r\n',
           );
           return;
         }
       }
-      await Future<void>.delayed(const Duration(milliseconds: 60));
+      final delay = failures == 0
+          ? const Duration(milliseconds: 60)
+          : Duration(milliseconds: (60 + failures * 20).clamp(60, 1000));
+      await Future<void>.delayed(delay);
     }
   }
 

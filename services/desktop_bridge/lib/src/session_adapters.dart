@@ -443,12 +443,17 @@ List<SessionAdapter> defaultSessionAdapters() {
   Directory dir(String path) => Directory(path);
   final claudeHome =
       Platform.environment['CLAUDE_CONFIG_DIR'] ?? '$home/.claude';
+  final claudeProjects =
+      Platform.environment['CLAUDE_PROJECTS_DIR'] ?? '$claudeHome/projects';
   final codexHome = Platform.environment['CODEX_HOME'] ?? '$home/.codex';
   final geminiHome = Platform.environment['GEMINI_HOME'] ?? '$home/.gemini';
   return [
     FileSessionAdapter(
       provider: AgentProvider.claude,
-      roots: [dir('$claudeHome/projects')],
+      roots: [
+        dir(claudeProjects),
+        dir('$claudeHome/sessions'),
+      ],
     ),
     OpenCodeSessionAdapter(),
     FileSessionAdapter(
