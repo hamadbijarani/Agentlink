@@ -282,6 +282,27 @@ class _TerminalScreenState extends State<TerminalScreen> {
     return result.take(8).toList();
   }
 
+  String _cleanChatText(String text) {
+    final lines = text.split('\n');
+    final kept = <String>[];
+    var blankRun = 0;
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (RegExp(r'^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏\-|/\\. ]+$').hasMatch(trimmed) &&
+          trimmed.length < 12) {
+        continue;
+      }
+      if (trimmed.isEmpty) {
+        blankRun++;
+        if (blankRun > 2) continue;
+      } else {
+        blankRun = 0;
+      }
+      kept.add(line);
+    }
+    return kept.join('\n').trim();
+  }
+
   String _displayOutput() {
     if (!_mainOutputOnly) return _output;
     final lines = _output.split('\n');
@@ -718,13 +739,16 @@ class _TerminalScreenState extends State<TerminalScreen> {
                                     : theme.colorScheme.outlineVariant,
                               ),
                             ),
-                            child: SelectableText(
-                              message.text,
-                              style: TextStyle(
-                                color: terminalForeground,
-                                fontSize: 12,
-                                height: 1.35,
-                                fontFamily: 'monospace',
+                            child: SelectionArea(
+                              child: Text(
+                                _cleanChatText(message.text),
+                                softWrap: true,
+                                style: TextStyle(
+                                  color: terminalForeground,
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  fontFamily: 'monospace',
+                                ),
                               ),
                             ),
                           ),
