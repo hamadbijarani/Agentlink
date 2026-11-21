@@ -46,7 +46,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
   var _endedNotified = false;
   String? _lastSizeSent;
   var _showJump = false;
-  var _chatMode = true;
   final List<({String role, String text})> _chat = [];
   final _assistantBuffer = StringBuffer();
   final _speech = SpeechToText();
@@ -303,27 +302,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
     return kept.join('\n').trim();
   }
 
-  String _displayOutput() {
-    if (!_mainOutputOnly) return _output;
-    final lines = _output.split('\n');
-    final kept = <String>[];
-    var blankRun = 0;
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (RegExp(r'^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏\-|/\\. ]+$').hasMatch(trimmed) &&
-          trimmed.length < 12) {
-        continue;
-      }
-      if (trimmed.isEmpty) {
-        blankRun++;
-        if (blankRun > 2) continue;
-      } else {
-        blankRun = 0;
-      }
-      kept.add(line);
-    }
-    return kept.join('\n');
-  }
 
   List<String> _slashSuggestions() {
     final commands = switch (widget.initial.provider) {
@@ -634,11 +612,6 @@ class _TerminalScreenState extends State<TerminalScreen> {
               onPressed: _attachDesktop,
               icon: const Icon(Icons.desktop_windows_outlined),
             ),
-          IconButton(
-            tooltip: _chatMode ? 'Terminal view' : 'Chat view',
-            onPressed: () => setState(() => _chatMode = !_chatMode),
-            icon: Icon(_chatMode ? Icons.terminal : Icons.chat_bubble_outline),
-          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
@@ -710,100 +683,67 @@ class _TerminalScreenState extends State<TerminalScreen> {
                 ),
               ),
             Expanded(
-              child: _chatMode
-                  ? ListView.builder(
-                      controller: _scroll,
-                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-                      itemCount: _chat.length,
-                      itemBuilder: (context, index) {
-                        final message = _chat[index];
-                        final isUser = message.role == 'user';
-                        return Align(
-                          alignment: isUser
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(10),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.82,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isUser
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.18)
-                                  : terminalBackground,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isUser
-                                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
-                                    : theme.colorScheme.outlineVariant,
-                              ),
-                            ),
-                            child: SelectionArea(
-                              child: Text(
-                                _cleanChatText(message.text),
-                                softWrap: true,
-                                style: TextStyle(
-                                  color: terminalForeground,
-                                  fontSize: 12,
-                                  height: 1.35,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      margin: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-                      decoration: BoxDecoration(
-                        color: terminalBackground,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: theme.colorScheme.outlineVariant),
+              child: ListView.builder(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+                itemCount: _chat.isEmpty
+                    ? 1
+                    : _chat.length,
+                itemBuilder: (context, index) {
+                  if (_chat.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        _running
+                            ? 'Connecting to the session…'
+                            : 'No output in this session.',
+                        style: TextStyle(
+                          color: terminalForeground,
+                          fontSize: 12,
+                          fontFamily: 'monospace',
+                        ),
                       ),
-                      child: Stack(
-                        children: [
-                          Scrollbar(
-                            controller: _scroll,
-                            interactive: true,
-                            thumbVisibility: true,
-                            thickness: 6,
-                            radius: const Radius.circular(3),
-                            child: SingleChildScrollView(
-                              controller: _scroll,
-                              padding: const EdgeInsets.all(12),
-                              child: SelectableText(
-                                _displayOutput().isEmpty
-                                    ? (_running
-                                          ? 'Connecting to the session…'
-                                          : 'No output in the terminal buffer.')
-                                    : _displayOutput(),
-                                style: TextStyle(
-                                  color: terminalForeground,
-                                  fontSize: 11.5,
-                                  height: 1.35,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                            ),
+                    );
+                  }
+                  final message = _chat[index];
+                  final isUser = message.role == 'user';
+                  return Align(
+                    alignment: isUser
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.86,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                            : terminalBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isUser
+                              ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                              : theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      child: SelectionArea(
+                        child: Text(
+                          _cleanChatText(message.text),
+                          softWrap: true,
+                          style: TextStyle(
+                            color: terminalForeground,
+                            fontSize: 12,
+                            height: 1.35,
+                            fontFamily: 'monospace',
                           ),
-                          if (_showJump)
-                            Positioned(
-                              right: 12,
-                              bottom: 12,
-                              child: FloatingActionButton.small(
-                                heroTag: 'jump',
-                                onPressed: () {
-                                  setState(() => _stickToBottom = true);
-                                  _jumpToBottom();
-                                },
-                                child: const Icon(Icons.arrow_downward),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
+                  );
+                },
+              ),
             ),
             _QuickKeys(
               enabled: _running,
@@ -909,7 +849,7 @@ class _TerminalScreenState extends State<TerminalScreen> {
                   ],
                 ),
               ),
-            if (_chatMode && _input.text.startsWith('/'))
+            if (_input.text.startsWith('/'))
               SizedBox(
                 height: 34,
                 child: ListView.separated(
