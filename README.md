@@ -52,6 +52,23 @@ claude / opencode / codex / gemini
 - **Restart** is supported for ended live sessions and historical sessions.
 - **Provider themes** are served by the bridge and applied dynamically in the app.
 
+## Features
+
+- Claude Code, OpenCode, Codex CLI, and Gemini CLI support
+- QR-code pairing with persistent device tokens
+- Real PTY sessions that keep running while the desktop is locked
+- Optional desktop terminal windows via `agentlink-bridge attach`
+- Chat-style mobile view with separate user/assistant messages
+- Prompt queue, slash-command hints, file/image attach
+- Model selection and provider-specific CLI shortcuts
+- Permission profiles and quick approval replies
+- Global session search across all providers
+- Multiple session tabs and auto-refresh
+- Direct HTTPS, Tailscale, LAN, and relay connectivity
+- Onboarding, diagnostics, privacy policy, backup/restore, update checks
+- Biometric unlock, certificate pinning, audit logging
+- GitHub Actions CI/CD with automated APK builds
+
 ## Quick start
 
 ### 1. Run the relay (on a server or home machine)
