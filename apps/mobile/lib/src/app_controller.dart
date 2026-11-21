@@ -282,13 +282,13 @@ final class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> refreshHistory() async {
+  Future<void> refreshHistory({String query = ''}) async {
     final api = _api;
     if (api == null || historyLoading) return;
     historyLoading = true;
     _notify();
     try {
-      history = await api.history();
+      history = await api.history(query: query);
     } on BridgeException catch (exception) {
       error = exception.message;
     } finally {

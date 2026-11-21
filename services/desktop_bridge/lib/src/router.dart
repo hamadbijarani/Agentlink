@@ -345,6 +345,7 @@ final class BridgeRouter {
   Future<BridgeResponse> _history(BridgeRequest request) async {
     final limit = (queryInt(request.query, 'limit', fallback: 200) ?? 200)
         .clamp(1, 500);
+    final query = (request.query['query'] ?? '').trim().toLowerCase();
     final results = await Future.wait(
       adapters.map((adapter) async {
         try {
@@ -355,8 +356,17 @@ final class BridgeRouter {
         }
       }),
     );
-    final all = results.expand((items) => items).toList()
+    var all = results.expand((items) => items).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    if (query.isNotEmpty) {
+      all = all.where((session) {
+        return session.title.toLowerCase().contains(query) ||
+            session.projectPath.toLowerCase().contains(query) ||
+            session.id.toLowerCase().contains(query) ||
+            session.provider.id.toLowerCase().contains(query) ||
+            session.provider.label.toLowerCase().contains(query);
+      }).toList();
+    }
     return _ok({
       'sessions': all.take(limit).map((session) => session.toJson()).toList(),
     });

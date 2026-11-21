@@ -694,11 +694,14 @@ final class BridgeApi {
     );
   }
 
-  Future<List<AgentSession>> history({int limit = 200}) async {
+  Future<List<AgentSession>> history({int limit = 200, String query = ''}) async {
     final json = await _request(
       'GET',
       '/v1/sessions',
-      query: {'limit': '$limit'},
+      query: {
+        'limit': '$limit',
+        if (query.trim().isNotEmpty) 'query': query.trim(),
+      },
     );
     return (json['sessions'] as List? ?? const [])
         .whereType<Map>()

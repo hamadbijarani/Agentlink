@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
@@ -19,9 +20,11 @@ final class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final _search = TextEditingController();
   AgentProvider? _filter;
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
   }
@@ -52,7 +55,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               controller: _search,
-              onChanged: (_) => setState(() {}),
+              onChanged: (value) {
+                setState(() {});
+                _debounce?.cancel();
+                _debounce = Timer(const Duration(milliseconds: 350), () {
+                  widget.controller.refreshHistory(query: value);
+                });
+              },
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'Search history by title or folder',
