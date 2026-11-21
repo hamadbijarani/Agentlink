@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bridge:
+    name: Desktop Bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install dependencies
+        working-directory: services/desktop_bridge
+        run: dart pub get
+      - name: Analyze
+        working-directory: services/desktop_bridge
+        run: dart analyze
+      - name: Test
+        working-directory: services/desktop_bridge
+        run: dart test
+
+  relay:
+    name: Relay
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install dependencies
+        working-directory: services/relay
+        run: dart pub get
+      - name: Analyze
+        working-directory: services/relay
+        run: dart analyze
+      - name: Test
+        working-directory: services/relay
+        run: dart test
+
+  mobile:
+    name: Mobile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+      - name: Install dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Analyze
+        working-directory: apps/mobile
+        run: flutter analyze
+      - name: Test
+        working-directory: apps/mobile
+        run: flutter test
+      - name: Build APK
+        working-directory: apps/mobile
+        run: flutter build apk --release

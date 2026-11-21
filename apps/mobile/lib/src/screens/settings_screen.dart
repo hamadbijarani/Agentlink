@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../app_controller.dart';
+import 'diagnostics_screen.dart';
+import 'privacy_policy_screen.dart';
+import '../services/update_service.dart';
+import '../services/backup_service.dart';
 import '../models.dart';
 
 final class SettingsScreen extends StatelessWidget {
@@ -251,6 +255,106 @@ final class SettingsScreen extends StatelessWidget {
                 ),
                 _Swatches(theme: controller.theme),
               ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _SectionCard(
+          title: 'APP FEATURES',
+          icon: Icons.apps,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.fingerprint),
+              title: const Text('Biometric unlock'),
+              subtitle: const Text('Require fingerprint/face to open app'),
+              trailing: Switch(
+                value: false,
+                onChanged: (v) {},
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.brightness_6),
+              title: const Text('Light theme'),
+              subtitle: const Text('Switch between dark and light'),
+              trailing: Switch(
+                value: false,
+                onChanged: (v) {},
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.system_update),
+              title: const Text('Check for updates'),
+              subtitle: const Text('From GitHub releases'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final info = await UpdateService.instance.checkForUpdate('1.0.0');
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      info != null
+                          ? 'Update available: ${info.version}'
+                          : 'You are up to date.',
+                    ),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.backup),
+              title: const Text('Backup settings'),
+              subtitle: const Text('Export pairing profile'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final data = await BackupService.instance.exportBackup(controller);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      data.isNotEmpty
+                          ? 'Backup ready (${data.length} bytes)'
+                          : 'No profile to back up.',
+                    ),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.bug_report),
+              title: const Text('Diagnostics'),
+              subtitle: const Text('View app logs'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const DiagnosticsScreen(),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.privacy_tip),
+              title: const Text('Privacy policy'),
+              subtitle: const Text('How your data is handled'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PrivacyPolicyScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
