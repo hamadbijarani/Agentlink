@@ -129,6 +129,8 @@ Important options: `--relay`, `--relay-token`, `--no-relay`, `--host`,
   per client address.
 - Use `wss://` for the relay or `https://` for direct mode whenever it is
   reachable from the internet.
+- Biometric unlock, certificate pinning, and audit logging are available in
+  Settings.
 
 ## Development
 
